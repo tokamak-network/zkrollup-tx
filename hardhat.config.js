@@ -33,7 +33,8 @@ module.exports = {
       //   protocol: "groth16",
       // },
       {
-        name: "single_tx/singleTx",
+        name: "singleTx",
+        protocol: "plonk",
       },
     ],
   },

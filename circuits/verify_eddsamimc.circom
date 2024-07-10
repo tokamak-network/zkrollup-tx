@@ -1,6 +1,6 @@
 pragma circom 2.0.0;
-include "../../node_modules/circomlib/circuits/eddsamimc.circom";
-include "../../node_modules/circomlib/circuits/mimc.circom";
+include "../node_modules/circomlib/circuits/eddsamimc.circom";
+include "../node_modules/circomlib/circuits/mimc.circom";
 
 template VerifyEdDSAMiMC(k){
     signal input from_x;

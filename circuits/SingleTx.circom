@@ -1,151 +1,109 @@
 pragma circom 2.0.0;
-
+include "./check_leaf_existence.circom";
+include "./get_merkle_root.circom";
 include "../node_modules/circomlib/circuits/mimc.circom";
 include "../node_modules/circomlib/circuits/eddsamimc.circom";
 
-template SingleTx(n) {
-    signal input current_state;
-    signal input initialOnChainRoot;
+template SingleTx(k){
+    // k is the depth of accounts tree
 
-    signal input paths2old_root_from[n-1];
-    signal input paths2old_root_to[n-1];
-    signal input paths2new_root_from[n-1];
-    signal input paths2new_root_to[n-1];
-    signal input paths2root_from_pos[n-1];
-    signal input paths2root_to_pos[n-1];
+    // accounts tree info
+    signal input accounts_root;
+    signal input intermediate_root;
+    signal input accounts_pubkey[2**k][2];
+    signal input accounts_balance[2**k];
 
-    signal input pub_from_x;
-    signal input pub_from_y;
-    signal input R8x;
-    signal input R8y;
-    signal input S;
+    // transactions info 
+    signal input sender_pubkey[2];
+    signal input sender_balance;
+    signal input receiver_pubkey[2];
+    signal input receiver_balance;
     signal input amount;
-
-    signal input nonce_from;
-    signal input nonce_to;
-
-    signal input pub_to_x;
-    signal input pub_to_y;
-    signal input token_balance_from;
-    signal output out;
-
-    var i;
-
-    var NONCE_MAX_VALUE = 1000000000000000000;
-
-    component old_hash_from = MultiMiMC7(7,91);
-    old_hash_from.in[0] <== initialOnChainRoot;
-    old_hash_from.in[1] <== pub_from_x;
-    old_hash_from.in[2] <== pub_from_y;
-    old_hash_from.in[3] <== nonce_from;
-    old_hash_from.in[4] <== amount;
-    old_hash_from.in[5] <== pub_to_x;
-    old_hash_from.in[6] <== pub_to_y;
-    old_hash_from.k <== 0;
+    signal input signature_R8x;
+    signal input signature_R8y;
+    signal input signature_S;
+    signal input sender_proof[k];
+    signal input sender_proof_pos[k];
+    signal input receiver_proof[k];
+    signal input receiver_proof_pos[k];
+    signal input enabled;
     
-    component old_merkle_from[n-1];
-    old_merkle_from[0] = MultiMiMC7(2,91);
-    old_merkle_from[0].in[0] <== old_hash_from.out - paths2root_from_pos[0]* (old_hash_from.out - paths2old_root_from[0]);
-    old_merkle_from[0].in[1] <== paths2old_root_from[0] - paths2root_from_pos[0]* (paths2old_root_from[0] - old_hash_from.out);
-    old_merkle_from[0].k     <== 0;
-    for (i=1; i<n-1; i++){
-        old_merkle_from[i] = MultiMiMC7(2,91);
-        old_merkle_from[i].in[0] <== old_merkle_from[i-1].out - paths2root_from_pos[i]* (old_merkle_from[i-1].out - paths2old_root_from[i]);
-        old_merkle_from[i].in[1] <== paths2old_root_from[i] - paths2root_from_pos[i]* (paths2old_root_from[i] - old_merkle_from[i-1].out);
-        old_merkle_from[i].k     <== 0;
+    signal output new_accounts_root;
+
+    // verify sender account exists in accounts_root
+    component senderExistence = LeafExistence(k,3);
+    senderExistence.preimage[0] <== sender_pubkey[0];
+    senderExistence.preimage[1] <== sender_pubkey[1];
+    senderExistence.preimage[2] <== sender_balance;
+    senderExistence.root <== accounts_root;
+    for(var i = 0; i < k; i++){
+        senderExistence.paths2_root_pos[i] <== sender_proof_pos[i];
+        senderExistence.paths2_root[i] <== sender_proof[i];
     }
 
-    current_state === old_merkle_from[n-2].out;
+    // hash msg
+    component msg = MultiMiMC7(5,91);
+    msg.k <== 1;
+    msg.in[0] <== sender_pubkey[0];
+    msg.in[1] <== sender_pubkey[1];
+    msg.in[2] <== receiver_pubkey[0];
+    msg.in[3] <== receiver_pubkey[1];
+    msg.in[4] <== amount; 
 
-    component old_hash_to = MultiMiMC7(4,91);
-    old_hash_to.in[0] <== initialOnChainRoot;
-    old_hash_to.in[1] <== pub_to_x;
-    old_hash_to.in[2] <== pub_to_y;
-    old_hash_to.in[3] <== nonce_to;
-    old_hash_to.k     <== 0;
+    // check that transaction was signed by sender
+    component signatureCheck = EdDSAMiMCVerifier();
+    signatureCheck.enabled <== enabled;
+    signatureCheck.Ax <== sender_pubkey[0];
+    signatureCheck.Ay <== sender_pubkey[1];
+    signatureCheck.R8x <== signature_R8x;
+    signatureCheck.R8y <== signature_R8y;
+    signatureCheck.S <== signature_S;
+    signatureCheck.M <== msg.out;
 
-    component old_merkle_to[n-1];
-    old_merkle_to[0] = MultiMiMC7(2,91);
-    old_merkle_to[0].in[0] <== old_hash_to.out - paths2root_to_pos[0]* (old_hash_to.out - paths2old_root_to[0]);
-    old_merkle_to[0].in[1] <== paths2old_root_to[0] - paths2root_to_pos[0]* (paths2old_root_to[0] - old_hash_to.out);
-    old_merkle_to[0].k     <== 0; 
-    for (i=1; i<n-1; i++){
-        old_merkle_to[i] = MultiMiMC7(2,91);
-        old_merkle_to[i].in[0] <== old_merkle_to[i-1].out - paths2root_to_pos[i]* (old_merkle_to[i-1].out - paths2old_root_to[i]);
-        old_merkle_to[i].in[1] <== paths2old_root_to[i] - paths2root_to_pos[i]* (paths2old_root_to[i] - old_merkle_to[i-1].out);
-        old_merkle_to[i].k     <== 0;  
-    }
+    // debit sender account and hash new sender leaf
+    component newSenderLeaf = MultiMiMC7(3,91);
+    newSenderLeaf.k <== 1;
+    newSenderLeaf.in[0] <== sender_pubkey[0];
+    newSenderLeaf.in[1] <== sender_pubkey[1];
+    newSenderLeaf.in[2] <== (sender_balance - amount);
     
-    current_state === old_merkle_to[n-2].out;
-
-    component verifier = EdDSAMiMCVerifier();   
-    verifier.enabled <== 1;
-    verifier.Ax <== pub_from_x;
-    verifier.Ay <== pub_from_y;
-    verifier.R8x <== R8x ;
-    verifier.R8y <== R8y ;
-    verifier.S <== S;
-    verifier.M <== old_hash_from.out;
-
-    component greFrom = GreaterEqThan (252) ;
-    greFrom.in[0] <== token_balance_from ;
-    greFrom.in[1] <== amount ;
-    greFrom.out === 1 ;
-
-    // component greTo = GreaterEqThan (252) ;
-    // greTo.in[0] <== token_balance_to + amount ;
-    // greTo.in[1] <== token_balance_to ;
-    // greTo.out === 1 ;
-
-    component nonceCheck = GreaterEqThan (252) ;
-    nonceCheck.in[0] <== NONCE_MAX_VALUE ;
-    nonceCheck.in[1] <== nonce_from ;
-    nonceCheck.out === 1 ;
-
-    // // accounts updates
-    component new_hash_from = MultiMiMC7(6,91);
-    new_hash_from.in[0] <== pub_from_x;
-    new_hash_from.in[1] <== pub_from_y;
-    new_hash_from.in[2] <== nonce_from + 1;
-    new_hash_from.in[3] <== amount;
-    new_hash_from.in[4] <== pub_to_x;
-    new_hash_from.in[5] <== pub_to_y;
-    new_hash_from.k     <== 0 ;
-
-    component new_merkle_from[n-1];
-    new_merkle_from[0] = MultiMiMC7(2,91);
-    new_merkle_from[0].in[0] <== new_hash_from.out - paths2root_from_pos[0]* (new_hash_from.out - paths2new_root_from[0]);
-    new_merkle_from[0].in[1] <== paths2new_root_from[0] - paths2root_from_pos[0]* (paths2new_root_from[0] - new_hash_from.out);
-    new_merkle_from[0].k     <== 0 ;
-    for (i=1; i<n-1; i++){
-        new_merkle_from[i] = MultiMiMC7(2,91);
-        new_merkle_from[i].in[0] <== new_merkle_from[i-1].out - paths2root_from_pos[i]* (new_merkle_from[i-1].out - paths2new_root_from[i]);
-        new_merkle_from[i].in[1] <== paths2new_root_from[i] - paths2root_from_pos[i]* (paths2new_root_from[i] - new_merkle_from[i-1].out);
-        new_merkle_from[i].k     <== 0 ;
+    component compute_intermediate_root = GetMerkleRoot(k);
+    compute_intermediate_root.leaf <== newSenderLeaf.out;
+    for(var i = 0; i < k; i++){
+        compute_intermediate_root.paths2_root_pos[i] <== sender_proof_pos[i];
+        compute_intermediate_root.paths2_root[i] <== sender_proof[i];
     }
 
-    component new_hash_to = MultiMiMC7(4,91);
-    new_hash_to.in[0] <== pub_to_x;
-    new_hash_to.in[1] <== pub_to_y;
-    new_hash_to.in[2] <== nonce_to + 1;
-    new_hash_to.in[3] <== amount;
-    new_hash_to.k     <== 0 ;
-    // log(new_hash_to.out) ;
+    // check that computed_intermediate_root.out === intermediate_root
+    compute_intermediate_root.out === intermediate_root;
 
-    component new_merkle_to[n-1];
-    new_merkle_to[0] = MultiMiMC7(2,91);
-    new_merkle_to[0].in[0] <== new_hash_to.out - paths2root_to_pos[0]* (new_hash_to.out - paths2new_root_to[0]);
-    new_merkle_to[0].in[1] <== paths2new_root_to[0] - paths2root_to_pos[0]* (paths2new_root_to[0] - new_hash_to.out);
-    new_merkle_to[0].k     <== 0;
-    for (i=1; i<n-1; i++){
-        new_merkle_to[i] = MultiMiMC7(2,91);
-        new_merkle_to[i].in[0] <== new_merkle_to[i-1].out - paths2root_to_pos[i]* (new_merkle_to[i-1].out - paths2new_root_to[i]);
-        new_merkle_to[i].in[1] <== paths2new_root_to[i] - paths2root_to_pos[i]* (paths2new_root_to[i] - new_merkle_to[i-1].out);
-        new_merkle_to[i].k     <== 0;
+    // verify receiver account exists in intermediate_root
+    component receiverExistence = LeafExistence(k,3);
+    receiverExistence.preimage[0] <== receiver_pubkey[0];
+    receiverExistence.preimage[1] <== receiver_pubkey[1];
+    receiverExistence.preimage[2] <== receiver_balance;
+    receiverExistence.root <== intermediate_root;
+    for(var i = 0; i < k; i++){
+        receiverExistence.paths2_root_pos[i] <== receiver_proof_pos[i];
+        receiverExistence.paths2_root[i] <== receiver_proof[i];
     }
-    new_merkle_from[n-2].out === new_merkle_to[n-2].out ;
-    
-    out <== new_merkle_to[n-2].out;
+
+    // credit receiver account and hash new receiver leaf
+    component newReceiverLeaf = MultiMiMC7(3,91);
+    newReceiverLeaf.in[0] <== receiver_pubkey[0];
+    newReceiverLeaf.in[1] <== receiver_pubkey[1];
+    newReceiverLeaf.in[2] <== (receiver_balance + amount);
+    newReceiverLeaf.k <== 1;
+
+    // update accounts_root
+    component compute_final_root = GetMerkleRoot(k);
+    compute_final_root.leaf <== newReceiverLeaf.out;
+    for(var i = 0; i < k; i++){
+        compute_final_root.paths2_root_pos[i] <== receiver_proof_pos[i];
+        compute_final_root.paths2_root[i] <== receiver_proof[i];
+    }
+
+    //output final accounts_root
+    new_accounts_root <== compute_final_root.out;
 }
-
-// component main  = SingleTransaction(2);
+component main = SingleTx(1);
