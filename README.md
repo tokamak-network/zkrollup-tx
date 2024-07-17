@@ -1,15 +1,4 @@
-# circom-starter
-
-A basic circom project using [Hardhat](https://github.com/nomiclabs/hardhat) and [hardhat-circom](https://github.com/projectsophon/hardhat-circom). This combines the multiple steps of the [Circom](https://github.com/iden3/circom) and [SnarkJS](https://github.com/iden3/snarkjs) workflow into your [Hardhat](https://hardhat.org) workflow.
-
-By providing configuration containing your Phase 1 Powers of Tau and circuits, this plugin will:
-
-1. Compile the circuits
-2. Apply the final beacon
-3. Output your `wasm` and `zkey` files
-4. Generate and output a `Verifier.sol`
-
-## Documentation
+# Documentation
 
 ### Basic Rollup Transaction Circuits Progress
 
