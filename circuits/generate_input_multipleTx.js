@@ -22,12 +22,44 @@ async function main() {
     account.publicKey = eddsa.prv2pub(account.privateKey);
   });
 
-  // Calculate initial root
-  const accountHashes = accounts.map(account => 
-    mimc7.multiHash([account.publicKey[0], account.publicKey[1], account.balance], 1)
-  );
-  
-  let currentRoot = mimc7.multiHash(accountHashes, 1);
+  // Helper function to calculate account hash
+  function calculateAccountHash(account) {
+    return mimc7.multiHash([account.publicKey[0], account.publicKey[1], account.balance], 1);
+  }
+
+  // Helper function to calculate Merkle root
+  function calculateMerkleRoot(hashes) {
+    if (hashes.length === 1) return hashes[0];
+    const newHashes = [];
+    for (let i = 0; i < hashes.length; i += 2) {
+      const left = hashes[i];
+      const right = i + 1 < hashes.length ? hashes[i + 1] : left;
+      newHashes.push(mimc7.multiHash([left, right], 1));
+    }
+    return calculateMerkleRoot(newHashes);
+  }
+
+  // Helper function to generate Merkle proof
+  function generateMerkleProof(hashes, index) {
+    const proof = [];
+    const proofPos = [];
+    let currentIndex = index;
+    while (hashes.length > 1) {
+      const siblingIndex = currentIndex % 2 === 0 ? currentIndex + 1 : currentIndex - 1;
+      proof.push(siblingIndex < hashes.length ? hashes[siblingIndex] : hashes[currentIndex]);
+      proofPos.push(currentIndex % 2);
+      hashes = hashes.reduce((acc, _, i, arr) => {
+        if (i % 2 === 0) acc.push(mimc7.multiHash([arr[i], arr[i + 1] || arr[i]], 1));
+        return acc;
+      }, []);
+      currentIndex = Math.floor(currentIndex / 2);
+    }
+    return { proof, proofPos };
+  }
+
+  // Calculate initial account hashes and root
+  let accountHashes = accounts.map(calculateAccountHash);
+  let currentRoot = calculateMerkleRoot(accountHashes);
 
   // Define transactions
   const transactions = [
@@ -61,23 +93,22 @@ async function main() {
     const sender = accounts[tx.from];
     const receiver = accounts[tx.to];
 
-    // Calculate intermediate root (after sender's balance is updated)
+    // Calculate intermediate state (after sender's balance is updated)
     const intermediateSenderBalance = sender.balance - tx.amount;
-    const intermediateAccountHashes = accountHashes.map((hash, index) => 
-      index === tx.from ? mimc7.multiHash([sender.publicKey[0], sender.publicKey[1], intermediateSenderBalance], 1) : hash
-    );
-    const intermediateRoot = mimc7.multiHash(intermediateAccountHashes, 1);
+    const intermediateAccountHashes = [...accountHashes];
+    intermediateAccountHashes[tx.from] = mimc7.multiHash([sender.publicKey[0], sender.publicKey[1], intermediateSenderBalance], 1);
+    const intermediateRoot = calculateMerkleRoot(intermediateAccountHashes);
 
     // Update balances
     sender.balance -= tx.amount;
     receiver.balance += tx.amount;
 
-    // Calculate new account hashes
-    accountHashes[tx.from] = mimc7.multiHash([sender.publicKey[0], sender.publicKey[1], sender.balance], 1);
-    accountHashes[tx.to] = mimc7.multiHash([receiver.publicKey[0], receiver.publicKey[1], receiver.balance], 1);
+    // Update account hashes
+    accountHashes[tx.from] = calculateAccountHash(sender);
+    accountHashes[tx.to] = calculateAccountHash(receiver);
 
     // Calculate new root
-    const newRoot = mimc7.multiHash(accountHashes, 1);
+    const newRoot = calculateMerkleRoot(accountHashes);
 
     // Sign transaction
     const txHash = mimc7.multiHash(
@@ -85,6 +116,10 @@ async function main() {
       1
     );
     const signature = eddsa.signMiMC(sender.privateKey, txHash);
+
+    // Generate Merkle proofs
+    const senderProof = generateMerkleProof(intermediateAccountHashes, tx.from);
+    const receiverProof = generateMerkleProof(accountHashes, tx.to);
 
     // Prepare inputs for this transaction
     for (let j = 0; j < accountsCount; j++) {
@@ -109,14 +144,12 @@ async function main() {
     inputs.signature_R8y[i] = BigInt(F.toObject(signature.R8[1])).toString();
     inputs.signature_S[i] = BigInt(signature.S).toString();
 
-    // Generate Merkle proofs (simplified version)
-    inputs.sender_proof[i] = Array(k).fill(BigInt(F.toObject(accountHashes[0])).toString());
-    inputs.sender_proof_pos[i] = Array(k).fill("0");
-    inputs.receiver_proof[i] = Array(k).fill(BigInt(F.toObject(accountHashes[1])).toString());
-    inputs.receiver_proof_pos[i] = Array(k).fill("1");
+    inputs.sender_proof[i] = senderProof.proof.map(h => BigInt(F.toObject(h)).toString());
+    inputs.sender_proof_pos[i] = senderProof.proofPos.map(String);
+    inputs.receiver_proof[i] = receiverProof.proof.map(h => BigInt(F.toObject(h)).toString());
+    inputs.receiver_proof_pos[i] = receiverProof.proofPos.map(String);
     inputs.enabled[i] = "1";
 
-    // Add intermediate root
     inputs.intermediate_roots[i] = BigInt(F.toObject(intermediateRoot)).toString();
 
     // Update current root for next transaction
