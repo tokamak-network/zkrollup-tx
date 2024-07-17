@@ -11,7 +11,51 @@ By providing configuration containing your Phase 1 Powers of Tau and circuits, t
 
 ## Documentation
 
-See the source projects for full documentation and configuration
+### Basic Rollup Transaction Circuits Progress
+
+This update outlines the current computational constraints and input structures for the `SingleTx` and `MultipleTx` components of our rollup system, highlighting areas for potential optimization.
+
+### SingleTx Component Status
+
+The `SingleTx` component processes individual transactions. Here are the details on constraints and inputs:
+
+- **Constraints**:
+  ~~~ 
+  Constraints(singleTx(k)) = 11900 + 2924 * k 
+  ~~~
+    - The variable `k` indicates the depth of the accounts tree involved in the transaction.
+
+- **Inputs**:
+  ~~~
+  Inputs(singleTx(k)) = 13 + 4 * k + 3 * 2^k
+  ~~~
+    - **Fixed Inputs**: Total of 13 inputs.
+    - **Variable Inputs Based on k**:
+      - **Proofs**: `sender_proof`, `sender_proof_pos`, `receiver_proof`, `receiver_proof_pos`: Total of 4k inputs.
+      - **Accounts Public Keys**: Requires 2 * 2^k inputs.
+      - **Accounts Balances**: Requires 2^k inputs.
+
+#### Optimization Note
+
+The inputs for `accounts_pubkey` and `accounts_balance` are currently direct and inefficient. Transitioning these to a Merkle proof-based system during preprocessing could significantly streamline the inputs and reduce computational requirements.
+
+### MultipleTx Component Status
+
+The `MultipleTx` component manages the processing of multiple transactions per batch:
+
+- **Constraints**:
+  ~~~
+  Constraints(multipleTx(k, n)) = n * (singleTx(k))
+  ~~~
+    - `n` represents the number of transactions in a batch.
+
+- **Inputs**:
+  ~~~
+  Inputs(multipleTx(k, n)) ≈ n * (Inputs(singleTx(k)))
+  ~~~
+    - This implies that the input requirements scale linearly with the number of transactions.
+
+
 
 ## Install
 
