@@ -16,7 +16,7 @@ module.exports = {
   },
   circom: {
     inputBasePath: "./circuits",
-    ptau: "https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_15.ptau",
+    ptau: "https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_17.ptau",
     circuits: [
       // {
       //   name: "division",
@@ -32,8 +32,12 @@ module.exports = {
       //   // Explicitly generate groth16
       //   protocol: "groth16",
       // },
+      // {
+      //   name: "singleTx",
+      //   protocol: "plonk",
+      // },
       {
-        name: "singleTx",
+        name: "multipleTx",
         protocol: "plonk",
       },
     ],

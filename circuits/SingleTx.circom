@@ -10,8 +10,8 @@ template SingleTx(k){
     // accounts tree info
     signal input accounts_root;
     signal input intermediate_root;
-    signal input accounts_pubkey[2**k][2];
-    signal input accounts_balance[2**k];
+    signal input accounts_pubkey[2**k][2]; //can replace merkle proof : input size n -> log n
+    signal input accounts_balance[2**k]; //can replace merkle proof : input size n -> log n
 
     // transactions info 
     signal input sender_pubkey[2];
@@ -106,4 +106,4 @@ template SingleTx(k){
     //output final accounts_root
     new_accounts_root <== compute_final_root.out;
 }
-component main = SingleTx(1);
+//component main = SingleTx(1);
