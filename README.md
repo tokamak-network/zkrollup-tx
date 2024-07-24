@@ -10,10 +10,12 @@ The `SingleTx` component processes individual transactions. Here are the details
 
 - **Constraints**:
   ~~~ 
-  Constraints(singleTx(k)) = 11900 + 2924 * k 
+  MiMC hash: Constraints(singleTx(k)) = 11900 + 2924 * k
+  Poseidon hash: Constraints(singleTx(k)) = 5582 + 972 * k
   ~~~
     - The variable `k` indicates the depth of the accounts tree involved in the transaction.
 
+  ⚠️ Poseidon hash constraints increase approximately 8 times when converted to Plonk constraints.
 - **Inputs**:
   ~~~
   Inputs(singleTx(k)) = 13 + 4 * k + 3 * 2^k
