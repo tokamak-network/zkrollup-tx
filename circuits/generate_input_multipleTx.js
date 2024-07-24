@@ -1,9 +1,9 @@
 const fs = require("fs");
-const { buildBabyjub, buildMimc7, buildEddsa } = require("circomlibjs");
+const { buildBabyjub, buildPoseidon, buildEddsa } = require("circomlibjs");
 
 async function main() {
   const babyJub = await buildBabyjub();
-  const mimc7 = await buildMimc7();
+  const poseidon = await buildPoseidon();
   const eddsa = await buildEddsa();
   const F = babyJub.F;
   
@@ -24,7 +24,7 @@ async function main() {
 
   // Helper function to calculate account hash
   function calculateAccountHash(account) {
-    return mimc7.multiHash([account.publicKey[0], account.publicKey[1], account.balance], 1);
+    return poseidon([account.publicKey[0], account.publicKey[1], account.balance]);
   }
 
   // Helper function to calculate Merkle root
@@ -34,7 +34,7 @@ async function main() {
     for (let i = 0; i < hashes.length; i += 2) {
       const left = hashes[i];
       const right = i + 1 < hashes.length ? hashes[i + 1] : left;
-      newHashes.push(mimc7.multiHash([left, right], 1));
+      newHashes.push(poseidon([left, right]));
     }
     return calculateMerkleRoot(newHashes);
   }
@@ -49,7 +49,7 @@ async function main() {
       proof.push(siblingIndex < hashes.length ? hashes[siblingIndex] : hashes[currentIndex]);
       proofPos.push(currentIndex % 2);
       hashes = hashes.reduce((acc, _, i, arr) => {
-        if (i % 2 === 0) acc.push(mimc7.multiHash([arr[i], arr[i + 1] || arr[i]], 1));
+        if (i % 2 === 0) acc.push(poseidon([arr[i], arr[i + 1] || arr[i]]));
         return acc;
       }, []);
       currentIndex = Math.floor(currentIndex / 2);
@@ -96,7 +96,7 @@ async function main() {
     // Calculate intermediate state (after sender's balance is updated)
     const intermediateSenderBalance = sender.balance - tx.amount;
     const intermediateAccountHashes = [...accountHashes];
-    intermediateAccountHashes[tx.from] = mimc7.multiHash([sender.publicKey[0], sender.publicKey[1], intermediateSenderBalance], 1);
+    intermediateAccountHashes[tx.from] = poseidon([sender.publicKey[0], sender.publicKey[1], intermediateSenderBalance]);
     const intermediateRoot = calculateMerkleRoot(intermediateAccountHashes);
 
     // Update balances
@@ -111,11 +111,10 @@ async function main() {
     const newRoot = calculateMerkleRoot(accountHashes);
 
     // Sign transaction
-    const txHash = mimc7.multiHash(
-      [sender.publicKey[0], sender.publicKey[1], receiver.publicKey[0], receiver.publicKey[1], tx.amount],
-      1
-    );
-    const signature = eddsa.signMiMC(sender.privateKey, txHash);
+    const txHash = poseidon([
+      sender.publicKey[0], sender.publicKey[1], receiver.publicKey[0], receiver.publicKey[1], F.e(tx.amount)
+    ]);
+    const signature = eddsa.signPoseidon(sender.privateKey, txHash);
 
     // Generate Merkle proofs
     const senderProof = generateMerkleProof(intermediateAccountHashes, tx.from);

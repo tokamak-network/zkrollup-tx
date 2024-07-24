@@ -103,4 +103,4 @@ template SingleTx(k){
     //output final accounts_root
     new_accounts_root <== compute_final_root.out;
 }
-component main = SingleTx(1);
+//component main = SingleTx(2);
