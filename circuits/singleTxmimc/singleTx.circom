@@ -1,8 +1,8 @@
 pragma circom 2.0.0;
 include "./check_leaf_existence.circom";
 include "./get_merkle_root.circom";
-include "../node_modules/circomlib/circuits/mimc.circom";
-include "../node_modules/circomlib/circuits/eddsamimc.circom";
+include "../../node_modules/circomlib/circuits/mimc.circom";
+include "../../node_modules/circomlib/circuits/eddsamimc.circom";
 
 template SingleTx(k){
     // k is the depth of accounts tree
@@ -106,4 +106,4 @@ template SingleTx(k){
     //output final accounts_root
     new_accounts_root <== compute_final_root.out;
 }
-//component main = SingleTx(1);
+component main = SingleTx(1);
