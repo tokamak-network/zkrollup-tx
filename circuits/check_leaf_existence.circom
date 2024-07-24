@@ -1,6 +1,6 @@
 pragma circom 2.0.0;
 include "./get_merkle_root.circom";
-include "../node_modules/circomlib/circuits/mimc.circom";
+include "../node_modules/circomlib/circuits/poseidon.circom";
 
 template LeafExistence(k,l){
     // k is depth of the tree, l is length preimage of leaf
@@ -10,10 +10,9 @@ template LeafExistence(k,l){
     signal input paths2_root_pos[k];
     signal input paths2_root[k];
 
-    component leaf = MultiMiMC7(l,91);
-    leaf.k <== 1;
+    component leaf = Poseidon(l);
     for(var i = 0; i < l; i++){
-        leaf.in[i] <== preimage[i];
+        leaf.inputs[i] <== preimage[i];
     }
 
     component computed_root = GetMerkleRoot(k);

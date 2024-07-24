@@ -1,5 +1,5 @@
 pragma circom 2.0.0;
-include "../node_modules/circomlib/circuits/mimc.circom";
+include "../node_modules/circomlib/circuits/poseidon.circom";
 
 template DualMux(){
     signal input in[2];
@@ -30,10 +30,9 @@ template GetMerkleRoot(k){
         selectors[i].in[1] <== paths2_root[i];
         selectors[i].s <== paths2_root_pos[i];
 
-        hashers[i] = MultiMiMC7(2,91);
-        hashers[i].k <== 1;
-        hashers[i].in[0] <== selectors[i].out[0];
-        hashers[i].in[1] <== selectors[i].out[1];
+        hashers[i] = Poseidon(2);
+        hashers[i].inputs[0] <== selectors[i].out[0];
+        hashers[i].inputs[1] <== selectors[i].out[1];
     }
 
     out <== hashers[k-1].out;

@@ -1,8 +1,8 @@
 pragma circom 2.0.0;
 include "./check_leaf_existence.circom";
 include "./get_merkle_root.circom";
-include "../node_modules/circomlib/circuits/mimc.circom";
-include "../node_modules/circomlib/circuits/eddsamimc.circom";
+include "../node_modules/circomlib/circuits/poseidon.circom";
+include "../node_modules/circomlib/circuits/eddsaposeidon.circom";
 
 template SingleTx(k){
     // k is the depth of accounts tree
@@ -42,16 +42,15 @@ template SingleTx(k){
     }
 
     // hash msg
-    component msg = MultiMiMC7(5,91);
-    msg.k <== 1;
-    msg.in[0] <== sender_pubkey[0];
-    msg.in[1] <== sender_pubkey[1];
-    msg.in[2] <== receiver_pubkey[0];
-    msg.in[3] <== receiver_pubkey[1];
-    msg.in[4] <== amount; 
+    component msg = Poseidon(5);
+    msg.inputs[0] <== sender_pubkey[0];
+    msg.inputs[1] <== sender_pubkey[1];
+    msg.inputs[2] <== receiver_pubkey[0];
+    msg.inputs[3] <== receiver_pubkey[1];
+    msg.inputs[4] <== amount; 
 
     // check that transaction was signed by sender
-    component signatureCheck = EdDSAMiMCVerifier();
+    component signatureCheck = EdDSAPoseidonVerifier();
     signatureCheck.enabled <== enabled;
     signatureCheck.Ax <== sender_pubkey[0];
     signatureCheck.Ay <== sender_pubkey[1];
@@ -61,11 +60,10 @@ template SingleTx(k){
     signatureCheck.M <== msg.out;
 
     // debit sender account and hash new sender leaf
-    component newSenderLeaf = MultiMiMC7(3,91);
-    newSenderLeaf.k <== 1;
-    newSenderLeaf.in[0] <== sender_pubkey[0];
-    newSenderLeaf.in[1] <== sender_pubkey[1];
-    newSenderLeaf.in[2] <== (sender_balance - amount);
+    component newSenderLeaf = Poseidon(3);
+    newSenderLeaf.inputs[0] <== sender_pubkey[0];
+    newSenderLeaf.inputs[1] <== sender_pubkey[1];
+    newSenderLeaf.inputs[2] <== (sender_balance - amount);
     
     component compute_intermediate_root = GetMerkleRoot(k);
     compute_intermediate_root.leaf <== newSenderLeaf.out;
@@ -89,11 +87,10 @@ template SingleTx(k){
     }
 
     // credit receiver account and hash new receiver leaf
-    component newReceiverLeaf = MultiMiMC7(3,91);
-    newReceiverLeaf.in[0] <== receiver_pubkey[0];
-    newReceiverLeaf.in[1] <== receiver_pubkey[1];
-    newReceiverLeaf.in[2] <== (receiver_balance + amount);
-    newReceiverLeaf.k <== 1;
+    component newReceiverLeaf = Poseidon(3);
+    newReceiverLeaf.inputs[0] <== receiver_pubkey[0];
+    newReceiverLeaf.inputs[1] <== receiver_pubkey[1];
+    newReceiverLeaf.inputs[2] <== (receiver_balance + amount);
 
     // update accounts_root
     component compute_final_root = GetMerkleRoot(k);
@@ -106,4 +103,4 @@ template SingleTx(k){
     //output final accounts_root
     new_accounts_root <== compute_final_root.out;
 }
-//component main = SingleTx(1);
+component main = SingleTx(1);

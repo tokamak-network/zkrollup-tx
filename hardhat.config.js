@@ -32,14 +32,14 @@ module.exports = {
       //   // Explicitly generate groth16
       //   protocol: "groth16",
       // },
-      // {
-      //   name: "singleTx",
-      //   protocol: "plonk",
-      // },
       {
-        name: "multipleTx",
+        name: "singleTx",
         protocol: "plonk",
       },
+      // {
+      //   name: "multipleTx",
+      //   protocol: "plonk",
+      // },
     ],
   },
 };
