@@ -70,8 +70,6 @@ async function main() {
 
   const inputs = {
     initial_accounts_root: BigInt(F.toObject(currentRoot)).toString(),
-    accounts_pubkey: Array(n).fill().map(() => Array(accountsCount).fill().map(() => ["0", "0"])),
-    accounts_balance: Array(n).fill().map(() => Array(accountsCount).fill("0")),
     sender_pubkey: Array(n).fill().map(() => ["0", "0"]),
     sender_balance: Array(n).fill("0"),
     receiver_pubkey: Array(n).fill().map(() => ["0", "0"]),
@@ -121,13 +119,6 @@ async function main() {
     const receiverProof = generateMerkleProof(accountHashes, tx.to);
 
     // Prepare inputs for this transaction
-    for (let j = 0; j < accountsCount; j++) {
-      inputs.accounts_pubkey[i][j] = [
-        BigInt(F.toObject(accounts[j].publicKey[0])).toString(),
-        BigInt(F.toObject(accounts[j].publicKey[1])).toString()
-      ];
-      inputs.accounts_balance[i][j] = accounts[j].balance.toString();
-    }
     inputs.sender_pubkey[i] = [
       BigInt(F.toObject(sender.publicKey[0])).toString(),
       BigInt(F.toObject(sender.publicKey[1])).toString()

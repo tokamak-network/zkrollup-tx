@@ -26,9 +26,6 @@ The `SingleTx` component processes individual transactions. Here are the details
       - **Accounts Public Keys**: Requires 2 * 2^k inputs.
       - **Accounts Balances**: Requires 2^k inputs.
 
-#### Optimization Note
-
-The inputs for `accounts_pubkey` and `accounts_balance` are currently direct and inefficient. Transitioning these to a Merkle proof-based system during preprocessing could significantly streamline the inputs and reduce computational requirements.
 
 ### MultipleTx Component Status
 

@@ -61,17 +61,6 @@ async function main() {
   const inputs = {
     accounts_root: F.toObject(accounts_root).toString(),
     intermediate_root: F.toObject(intermediate_root).toString(),
-    accounts_pubkey: [
-      [
-        F.toObject(alice.pubkey[0]).toString(),
-        F.toObject(alice.pubkey[1]).toString(),
-      ],
-      [
-        F.toObject(bob.pubkey[0]).toString(),
-        F.toObject(bob.pubkey[1]).toString(),
-      ],
-    ],
-    accounts_balance: [alice.balance.toString(), bob.balance.toString()],
     sender_pubkey: [
       F.toObject(alice.pubkey[0]).toString(),
       F.toObject(alice.pubkey[1]).toString(),

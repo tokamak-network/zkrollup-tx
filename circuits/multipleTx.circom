@@ -9,8 +9,6 @@ template MultipleTx(k, n) {
     signal input initial_accounts_root;
 
     // Array of inputs for each transaction
-    signal input accounts_pubkey[n][2**k][2];
-    signal input accounts_balance[n][2**k];
     signal input sender_pubkey[n][2];
     signal input sender_balance[n];
     signal input receiver_pubkey[n][2];
@@ -41,11 +39,6 @@ template MultipleTx(k, n) {
         // Connect inputs
         txs[i].accounts_root <== roots[i];
         txs[i].intermediate_root <== intermediate_roots[i];
-        for (var j = 0; j < 2**k; j++) {
-            txs[i].accounts_pubkey[j][0] <== accounts_pubkey[i][j][0];
-            txs[i].accounts_pubkey[j][1] <== accounts_pubkey[i][j][1];
-            txs[i].accounts_balance[j] <== accounts_balance[i][j];
-        }
         txs[i].sender_pubkey[0] <== sender_pubkey[i][0];
         txs[i].sender_pubkey[1] <== sender_pubkey[i][1];
         txs[i].sender_balance <== sender_balance[i];
