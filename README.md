@@ -18,13 +18,11 @@ The `SingleTx` component processes individual transactions. Here are the details
   ⚠️ Poseidon hash constraints increase approximately 8 times when converted to Plonk constraints.
 - **Inputs**:
   ~~~
-  Inputs(singleTx(k)) = 13 + 4 * k + 3 * 2^k
+  Inputs(singleTx(k)) = 13 + 4 * k
   ~~~
     - **Fixed Inputs**: Total of 13 inputs.
     - **Variable Inputs Based on k**:
       - **Proofs**: `sender_proof`, `sender_proof_pos`, `receiver_proof`, `receiver_proof_pos`: Total of 4k inputs.
-      - **Accounts Public Keys**: Requires 2 * 2^k inputs.
-      - **Accounts Balances**: Requires 2^k inputs.
 
 
 ### MultipleTx Component Status
@@ -53,9 +51,18 @@ The `MultipleTx` component manages the processing of multiple transactions per b
 
 `yarn circom:dev` to build deterministic development circuits.
 
-Further, for debugging purposes, you may wish to inspect the intermediate files. This is possible with the `--debug` flag which the `circom:dev` task enables by default. You'll find them (by default) in `artifacts/circom/`
+Before running the development build, follow these steps:
 
-To build a single circuit during development, you can use the `--circuit` CLI parameter. For example, if you make a change to `hash.circom` and you want to _only_ rebuild that, you can run `yarn circom:dev --circuit hash`.
+1. Navigate to the circuits folder.
+2. Generate the JSON input file by executing the following command:
+~~~bash
+node generate_input_multipleTx.js
+~~~
+
+3. After generating the input file, proceed with the development build:
+~~~bash
+yarn circom:dev
+~~~
 
 ## Production builds
 
