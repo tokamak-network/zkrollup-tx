@@ -10,22 +10,21 @@ template LinkTx(k){
     // accounts tree info
     signal input accounts_root;
     signal input intermediate_root;
+    //@TODO: signal input links_root;
 
     // account State: sender
     signal input sender_pubkey[2];
     signal input sender_balance;
-    signal input ethAddr1;
-    signal input nonce1;
-    signal input score1;
-    signal input linkRoot1;
+    signal input sender_ethAddr;
+    signal input sender_nonce;
+    signal input sender_score; //@TODO: consider removing score in account state
 
     // account State: receiver
     signal input receiver_pubkey[2];
     signal input receiver_balance;
-    signal input ethAddr2;
-    signal input nonce2;
-    signal input score2;
-    signal input linkRoot2;
+    signal input receiver_ethAddr;
+    signal input receiver_nonce;
+    signal input receiver_score;
 
     //tx
     signal input amount;
@@ -39,16 +38,16 @@ template LinkTx(k){
     signal input enabled;
     
     signal output new_accounts_root;
+    //@TODO: signal output new_links_root;
 
     // verify sender account exists in accounts_root
-    component senderExistence = LeafExistence(k,7);
+    component senderExistence = LeafExistence(k,6);
     senderExistence.preimage[0] <== sender_pubkey[0];
     senderExistence.preimage[1] <== sender_pubkey[1];
     senderExistence.preimage[2] <== sender_balance;
-    senderExistence.preimage[3] <== ethAddr1;
-    senderExistence.preimage[4] <== nonce1;
-    senderExistence.preimage[5] <== score1;
-    senderExistence.preimage[6] <== linkRoot1;
+    senderExistence.preimage[3] <== sender_ethAddr;
+    senderExistence.preimage[4] <== sender_nonce;
+    senderExistence.preimage[5] <== sender_score;
     senderExistence.root <== accounts_root;
     for(var i = 0; i < k; i++){
         senderExistence.paths2_root_pos[i] <== sender_proof_pos[i];
@@ -74,14 +73,13 @@ template LinkTx(k){
     signatureCheck.M <== msg.out;
 
     // debit sender account and hash new sender leaf
-    component newSenderLeaf = Poseidon(7);
+    component newSenderLeaf = Poseidon(6);
     newSenderLeaf.inputs[0] <== sender_pubkey[0];
     newSenderLeaf.inputs[1] <== sender_pubkey[1];
     newSenderLeaf.inputs[2] <== (sender_balance - amount);
-    newSenderLeaf.inputs[3] <== ethAddr1;
-    newSenderLeaf.inputs[4] <== nonce1 + 1;
-    newSenderLeaf.inputs[5] <== score1;
-    newSenderLeaf.inputs[6] <== linkRoot1;
+    newSenderLeaf.inputs[3] <== sender_ethAddr;
+    newSenderLeaf.inputs[4] <== sender_nonce + 1;
+    newSenderLeaf.inputs[5] <== sender_score;
     
     component compute_intermediate_root = GetMerkleRoot(k);
     compute_intermediate_root.leaf <== newSenderLeaf.out;
@@ -94,14 +92,13 @@ template LinkTx(k){
     compute_intermediate_root.out === intermediate_root;
 
     // verify receiver account exists in intermediate_root
-    component receiverExistence = LeafExistence(k,7);
+    component receiverExistence = LeafExistence(k,6);
     receiverExistence.preimage[0] <== receiver_pubkey[0];
     receiverExistence.preimage[1] <== receiver_pubkey[1];
     receiverExistence.preimage[2] <== receiver_balance;
-    receiverExistence.preimage[3] <== ethAddr2;
-    receiverExistence.preimage[4] <== nonce2;
-    receiverExistence.preimage[5] <== score2;
-    receiverExistence.preimage[6] <== linkRoot2;
+    receiverExistence.preimage[3] <== receiver_ethAddr;
+    receiverExistence.preimage[4] <== receiver_nonce;
+    receiverExistence.preimage[5] <== receiver_score;
     receiverExistence.root <== intermediate_root;
     for(var i = 0; i < k; i++){
         receiverExistence.paths2_root_pos[i] <== receiver_proof_pos[i];
@@ -109,14 +106,13 @@ template LinkTx(k){
     }
 
     // credit receiver account and hash new receiver leaf
-    component newReceiverLeaf = Poseidon(7);
+    component newReceiverLeaf = Poseidon(6);
     newReceiverLeaf.inputs[0] <== receiver_pubkey[0];
     newReceiverLeaf.inputs[1] <== receiver_pubkey[1];
     newReceiverLeaf.inputs[2] <== (receiver_balance + amount);
-    newReceiverLeaf.inputs[3] <== ethAddr2;
-    newReceiverLeaf.inputs[4] <== nonce2;
-    newReceiverLeaf.inputs[5] <== score2;
-    newReceiverLeaf.inputs[6] <== linkRoot2;
+    newReceiverLeaf.inputs[3] <== receiver_ethAddr;
+    newReceiverLeaf.inputs[4] <== receiver_nonce;
+    newReceiverLeaf.inputs[5] <== receiver_score;
 
     // update accounts_root
     component compute_final_root = GetMerkleRoot(k);
